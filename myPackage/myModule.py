@@ -10,17 +10,20 @@ month = 1
 start = datetime.datetime(2017, 1, 1)
 end = datetime.datetime(2017, 8, 1)
 
-stock = None
-nodes = 0
-population = 10
-generations = 1000
+stock = None                    # Object to hold the dataframe from pandas.
+nodes = 0                       # Number of nodes / genes, each datetime is a node / gene.
+population = 10                 # A set of chromosomes, each chromosome consists of nodes / genes.
+generations = 1000              # Cycles of transformation, selection of best chromosomes etc.
 
-chromosones = [[]]
-constraints = []
-domain = ['Buy','Hold','Sell']
+chromosones = [[]]              # Each row is a chromosome, consists of nodes / genes.
+constraints = []                # Constraints is calculated in stock prize.
+domain = ['Buy','Hold','Sell']  # Valid domain values for each node / gene.
 
 def get_dataframe():
-
+    """
+    Creates a dataframe with pandas_datareader, and store table information about selected stock.
+    Each row is indexed by datetime, and default columns are 'open', 'close', 'high', 'low' prices through the day.
+    """
     global stock, nodes
     stock = data.DataReader("FUNCOM.OL", "yahoo", start, end)
     #quote = data.get_quote_yahoo('FUNCOM.OL')
@@ -56,7 +59,10 @@ def get_dataframe():
     stock['RSI'] = RSI
             
 def initiate_population():
-
+    """
+    Populate chromosome array, where each row is one chromosome / population,
+    consists of nodes / genes.
+    """
     # Special case for first element in array.
     chromosones[0].append(domain[randint(0,3)])
 
@@ -73,7 +79,15 @@ def initiate_population():
         chromosones[-1].append(domain[randint(0,3)])
 
 def chromosome_pair_up():
-
+    """
+    Chromosomes is paired up on random.
+    Each pair creates two children (new chromosomes) that gets added to the chromosome array.
+    The population is now doubled up.
+    The two children inherit each parents genes, and two genes from the other parent (2-point crossover).
+    A 2% probability for mutation (random gene flip) makes sure the solution does'nt get stuck in a local optimized solution.
+    Fitness is calculated, the best chromosomes survives, and half of the population is removed before next generation.
+    Repeat...
+    """
     parent_pair_up = []
         
     for gen in range(generations):
@@ -130,7 +144,9 @@ def chromosome_pair_up():
         parent_pair_up[:] = []
     
 def calculate_fitness():
-        
+    """
+    Fitness is calculated in highest stock prize gain.
+    """
     saldo = 1
     stocks = 0
 
@@ -159,7 +175,9 @@ def calculate_fitness():
         stocks = 0
     
 def remove_population():
-    
+    """
+    Remove half of the population with least gain in fitness (stock prize gain).
+    """
     # Remove half of population with least gain.
     for x in range(population):
         y = constraints.index(min(constraints))
@@ -167,7 +185,9 @@ def remove_population():
         constraints.remove(constraints[y])
 
 def print_fitness(gen):
-    
+    """
+    Prints best fitness for that generation.
+    """
     # Prints every chromosone.
     #print('Gen: ' + str(gen))
     #for x in range(population):
@@ -178,7 +198,11 @@ def print_fitness(gen):
     print('Gen ' + str(gen) + ': Best fitness: ' + '{:.2f}'.format(max(constraints)))
     
 def remove_chromosome_redundancy():
-
+    """
+    Remove domain redundanzy before adding to dataframe for correct view.
+    Multiple 'Buy' or 'Sell' in series is invalid for this solution. Change redundancy to 'Hold' instead.
+    Is'nt affected when fitness is calculated.
+    """
     # Enforce 'Buy' / 'Sell' every second time and remove redundancy for better view. 
     # Example multiple occurrences 'Buy', 'Buy', 'Buy', 'Sell' => 'Buy', 'Hold', 'Hold', 'Sell'.
     for index in range(population):            
